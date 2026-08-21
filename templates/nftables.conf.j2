@@ -1,0 +1,142 @@
+#!/usr/sbin/nft -f
+
+{% set ns = namespace(t_has_content=false) -%}
+{% macro t_new_section(title) %}
+    {% if ns.t_has_content %}
+
+    {% endif %}
+    {% set ns.t_has_content = true -%}
+    {{ title | comment(prefix_count=0, postfix_count=0) | indent(4, first=true)}}
+{% endmacro -%}
+
+{{ ansible_managed | comment }}
+
+# Clean
+{% if nftables_flush_ruleset | bool %}
+    flush ruleset
+{% else %}
+    {% for table in _nftables_tables -%}
+        destroy table {{ table.family }} {{ table.name }}
+    {% endfor %}
+{% endif %}
+
+{% if (_nftables_defines | length) > 0 %}
+{% set merged_defines = _nftables_defines | combine %}
+# Define
+    {% for name, value in merged_defines.items() %}
+        {% if value is string %}
+            {% set _content = value %}
+            {% set _definition = "define " ~ name ~ " = " ~ value -%}
+        {% else %}
+            {% set _definition = "define " ~ name ~ " = {\n" ~ value | join(",\n") | indent(4, first=true) ~ "\n}" %}
+        {% endif -%}
+        {{ _definition }}
+    {% endfor %}
+{% endif %}
+
+{% for table in _nftables_tables %}
+table {{ table.family }} {{ table.name }} {
+    {% set ns.t_has_content = false -%}
+
+    {# Merge variables #}
+    {# Data from the default table #}
+    {% if table.name == nftables_table_use_by_default %}
+        {% set merged_sets = _nftables_sets | selectattr('table', 'undefined') | combine %}
+        {% set merged_maps = _nftables_maps | selectattr('table', 'undefined') | combine %}
+        {% set merged_objects = _nftables_objects | selectattr('table', 'undefined') %}
+        {% set merged_chains = _nftables_chains | selectattr('table', 'undefined') %}
+    {% endif -%}
+
+    {# Then explicit object definition #}
+    {% set merged_sets = merged_sets | default({}) | combine(
+            _nftables_sets
+            | selectattr('table', 'defined')
+            | selectattr('table', 'equalto', table.name)
+            | combine
+        )
+    %}
+    {% set merged_maps = merged_maps | default({}) | combine(
+            _nftables_maps
+            | selectattr('table', 'defined')
+            | selectattr('table', 'equalto', table.name)
+            | combine
+        )
+    %}
+    {% set merged_objects = merged_objects | default([]) + (_nftables_objects | selectattr('table', 'defined') | selectattr('table', 'equalto', table.name)) %}
+    {% set merged_chains = merged_chains | default([]) + (_nftables_chains | selectattr('table', 'defined') | selectattr('table', 'equalto', table.name)) %}
+
+    {%- if (merged_objects | length) > 0 -%}
+        {{ t_new_section(title="Object definitions") }}
+        {%- for object in merged_objects %}
+            {% if object.content is not defined  or (object.content.splitlines() | length) == 0 %}
+                {% set _definition = object.type ~ " " ~ object.name ~ " {}" %}
+            {% elif (object.content.splitlines() | length) == 1 %}
+                {% set _definition = object.type ~ " " ~ object.name ~ " {" ~ object.content ~ "}" %}
+            {% else %}
+                {% set _definition = object.type ~ " " ~ object.name ~ " {\n" ~ object.content | indent(4, first=true) ~ "\n}" %}
+            {% endif -%}
+            {{ _definition | indent(4, first=true) }}
+        {% endfor %}
+    {% endif -%}
+
+    {%- if (merged_sets | length) > 0 -%}
+        {{ t_new_section(title="Set definitions") }}
+        {%- for name, value in merged_sets.items() if name != "table" %}
+            {% if (value.splitlines() | length) > 0 %}
+                {% set _definition = "set " ~ name ~ " {\n" ~ value | indent(4, first=true) ~ "\n}" -%}
+            {% else %}
+                {% set _definition = "set " ~ name ~ " {" ~ value ~ "}" -%}
+            {% endif -%}
+            {{ _definition | indent(4, first=true) }}
+        {% endfor %}
+    {% endif -%}
+
+    {%- if (merged_maps | length) > 0 -%}
+        {{ t_new_section(title="Map definitions") }}
+        {%- for name, value in merged_maps.items() if name != "table" %}
+            {% if (value.splitlines() | length) > 0 %}
+                {% set _definition = "map " ~ name ~ " {\n" ~ value | indent(4, first=true) ~ "\n}" -%}
+            {% else %}
+                {% set _definition = "map " ~ name ~ " {" ~ value ~ "}" -%}
+            {% endif -%}
+            {{ _definition | indent(4, first=true) }}
+        {% endfor %}
+    {% endif -%}
+
+    {% if (merged_chains | length) > 0 -%}
+    {{ t_new_section(title="Chain definitions") }}
+    {%- for chain in merged_chains %}
+    chain {{ chain.name }} {
+        {# rules define with the chain #}
+        {% set merged_rules = chain.rules | default({}) %}
+        {% if table.name == nftables_table_use_by_default %}
+            {# default table rule definition #}
+            {% set merged_rules = merged_rules | combine(
+                    _nftables_rules
+                    | selectattr('table', 'undefined')
+                    | selectattr('chain', 'equalto', chain.name)
+                    | map(attribute='rules')
+                    | combine
+                )
+            %}
+        {% endif %}
+        {# rules with explicit table #}
+        {% set merged_rules = merged_rules | combine(
+                _nftables_rules
+                | selectattr('table', 'defined')
+                | selectattr('table', 'equalto', table.name)
+                | selectattr('chain', 'equalto', chain.name)
+                | map(attribute='rules')
+                | combine
+            )
+        %}
+        {% if (merged_rules | length) > 0 -%}
+            {% for key, value in merged_rules.items() -%}
+                {{ value | indent(8, first=true) }}
+            {% endfor %}
+        {% endif %}
+    }
+    {% endfor %}
+    {% endif %}
+}
+{% endfor %}

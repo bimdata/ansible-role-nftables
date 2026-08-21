@@ -1,0 +1,31 @@
+---
+- name: "Install nftables package"
+  ansible.builtin.package:
+    name: "{{ nftables_pkg_name }}"
+    state: present
+
+- name: "Configure nftables configuration file"
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: "{{ nftables_config_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+    lstrip_blocks: true
+    trim_blocks: true
+  notify:
+    - Restart nftables service
+
+- name: "Validate nftables configuration file"
+  ansible.builtin.command:
+    cmd: "{{ nftables_nft_bin }} -c -f {{ nftables_config_file }}"
+  register: nftables_config_validation_result
+  failed_when: nftables_config_validation_result.rc != 0
+  changed_when: false
+  when: nftables_config_validation
+
+- name: "Configure nftables service"
+  ansible.builtin.service:
+    name: "{{ nftables_svc_name }}"
+    state: "{{ nftables_svc_state }}"
+    enabled: "{{ nftables_svc_enabled }}"

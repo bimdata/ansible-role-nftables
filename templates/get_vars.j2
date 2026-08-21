@@ -1,0 +1,15 @@
+#jinja2: lstrip_blocks: True
+{% set items = [] %}
+{% for varname in (lookup('varnames', '^' ~ app_name ~ '_.+_' ~ var_type ~ '(s)?$', wantlist=True) | sort) %}
+  {% set var = lookup('vars', varname) %}
+  {% if var is not none and (var | length) %}
+    {% if var is mapping %}
+      {% set noop = items.append(var) %}
+    {% elif var is iterable and var is not string %}
+      {% for item in var %}
+        {% set noop = items.append(item) %}
+      {% endfor %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+{{ items | to_json }}

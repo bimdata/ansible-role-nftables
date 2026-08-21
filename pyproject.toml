@@ -1,0 +1,30 @@
+[project]
+name = "ansible-role-nftables"
+version = "0.1.0"
+description = "Ansible role to manage nftables firewall"
+readme = "README.md"
+authors = [
+    { name = "RomainMou", email = "58464216+RomainMou@users.noreply.github.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "molecule-plugins[docker]>=26.7.15",
+    "molecule[docker]>=26.8.0",
+]
+
+[project.scripts]
+ansible-role-nftables = "ansible_role_nftables:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "ansible>=14.3.1",
+    "ansible-lint>=26.8.0",
+    "molecule>=26.8.0",
+]

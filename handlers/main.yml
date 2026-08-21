@@ -1,0 +1,8 @@
+---
+- name: Restart nftables service
+  ansible.builtin.service:
+    name: "{{ nftables_svc_name }}"
+    state: restarted
+  when:
+    - nftables_svc_state != 'stopped'
+    - nftables_svc_enabled
