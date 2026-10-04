@@ -1,6 +1,7 @@
 ---
 nftables_pkg_name: nftables
 
+nftables_enable_service_management: true
 nftables_svc_name: nftables
 nftables_svc_state: started
 nftables_svc_enabled: true

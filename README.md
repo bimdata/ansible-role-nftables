@@ -16,12 +16,13 @@ https://wiki.nftables.org/wiki-nftables/index.php/Main_Page).
 
 Variables used for the installation:
 
-| Variables            | Default value | Description                                            |
-|----------------------|---------------|--------------------------------------------------------|
-| nftables_pkg_name    | nftables      | The nftables APT package name.                         |
-| nftables_svc_name    | nftables      | The nftables service name to start/stop the daemon.    |
-| nftables_svc_state   | started       | The nftables service state in which nftable should be. |
-| nftables_svc_enabled | true          | If the nftables service should be enabled or not .     |
+| Variables                          | Default value | Description                                            |
+|------------------------------------|---------------|--------------------------------------------------------|
+| nftables_enable_service_management | true          | Whether the role will manage nftables service or not.  |
+| nftables_pkg_name                  | nftables      | The nftables APT package name.                         |
+| nftables_svc_name                  | nftables      | The nftables service name to start/stop the daemon.    |
+| nftables_svc_state                 | started       | The nftables service state in which nftable should be. |
+| nftables_svc_enabled               | true          | If the nftables service should be enabled or not .     |
 
 
 Variables used for the configuration:

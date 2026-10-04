@@ -3,8 +3,9 @@
   ansible.builtin.package:
     name: "{{ nftables_pkg_name }}"
     state: present
+  notify: Restart nftables service
 
-- name: "Configure nftables configuration file"
+- name: "Create nftables configuration file"
   ansible.builtin.template:
     src: nftables.conf.j2
     dest: "{{ nftables_config_file }}"
@@ -13,8 +14,7 @@
     mode: '0644'
     lstrip_blocks: true
     trim_blocks: true
-  notify:
-    - Restart nftables service
+  notify: Reload nftables service
 
 - name: "Validate nftables configuration file"
   ansible.builtin.command:
@@ -29,3 +29,4 @@
     name: "{{ nftables_svc_name }}"
     state: "{{ nftables_svc_state }}"
     enabled: "{{ nftables_svc_enabled }}"
+  when: nftables_enable_service_management| bool
