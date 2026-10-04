@@ -225,32 +225,32 @@ When you define rules in multiples places, all the `rules` dictionnary are merge
 
 First, each variables is retrieve in the list `_nftables_rules` by alphabetical order. Then, all the dictionnaries of this list are merged with `combine`. So, if two variables define the same rule, it can be override: the last variable wins.
 
-For example, `nftables_01_rule` will take precedence for the rule `10_precedence_illsutration`.
+For example, `nftables_01_rule` will take precedence for the rule `10_precedence_illustration`.
 ```
 nftables_00_precedence_rule:
   chain: input
   rules:
-    10_precedence_illsutration: "# This one does not apply"
+    10_precedence_illustration: "# This one does not apply"
 
 nftables_01_precedence_rule:
   chain: input
   rules:
-    10_precedence_illsutration: "# This on does apply"
+    10_precedence_illustration: "# This on does apply"
 ```
 
-Then we combien the `rules` define directly in the chain with this resulting dictionnary. The rules defined is their own variables wins against rules from `chain.rules`.
+Then we combine the `rules` define directly in the chain with this resulting dictionnary. The rules defined is their own variables wins against rules from `chain.rules`.
 
 For example
 ```
 nftables_base_chains:
   - name: input
     rules:
-      10_precedence_illsutration: "This one does not apply"
+      10_precedence_illustration: "This one does not apply"
 
 nftables_precedence_rules:
   - chain: input
     rules:
-      10_precedence_illsutration: "# This on does apply"
+      10_precedence_illustration: "# This on does apply"
 ```
 
 Finally, variable than explictly define `table` will take precedence over the variable the doesn't. Even when they are before in alphabetical order.
@@ -261,10 +261,22 @@ nftables_00_precedence_rule:
   chain: input
   table: main
   rules:
-    10_precedence_illsutration: "# This one does apply"
+    10_precedence_illustration: "# This one does apply"
 
 nftables_01_precedence_rule:
   chain: input
   rules:
-    10_precedence_illsutration: "# This on does not apply"
+    10_precedence_illustration: "# This on does not apply"
+```
+
+Then when building the final configuration, the `rules` are written in the alphabetical order of key.
+
+For example:
+```
+nftables_00_precedence_rule:
+  chain: input
+  table: main
+  rules:
+    10_precedence_illustration_2: "# This will be the second rule"
+    05_precedence_illustration_1: "# This will be the first rule"
 ```

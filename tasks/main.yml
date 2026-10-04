@@ -5,6 +5,32 @@
     state: present
   notify: Restart nftables service
 
+- name: "Assert that every table name are unique"
+  ansible.builtin.assert:
+    that:
+      - (_nftables_tables | map(attribute="name") | unique | length) == (_nftables_tables | length)
+    fail_msg: >-
+      Table named must be unique.
+      Names: {{ _nftables_tables | map(attribute="name") | join(", ") }}.
+
+- name: "Assert that every chain name are unique in a table"
+  ansible.builtin.assert:
+    that:
+      - (_chains_with_table | unique | length) == (_chains_with_table | length)
+    fail_msg: >-
+      Chains named must be unique in a table.
+      Names: {{ _chains_with_table | join(", ") }}.
+  vars:
+    _chains_with_table: >-
+      {{
+        _nftables_chains
+        | map(attribute='table', default=nftables_table_use_by_default)
+        | zip(_nftables_chains | map(attribute='name'))
+        | map('join', ':')
+      }}
+
+# TODO: more data validation
+
 - name: "Create nftables configuration file"
   ansible.builtin.template:
     src: nftables.conf.j2
@@ -14,15 +40,8 @@
     mode: '0644'
     lstrip_blocks: true
     trim_blocks: true
+    validate: "{{ nftables_nft_bin }} -c -f %s"
   notify: Reload nftables service
-
-- name: "Validate nftables configuration file"
-  ansible.builtin.command:
-    cmd: "{{ nftables_nft_bin }} -c -f {{ nftables_config_file }}"
-  register: nftables_config_validation_result
-  failed_when: nftables_config_validation_result.rc != 0
-  changed_when: false
-  when: nftables_config_validation
 
 - name: "Configure nftables service"
   ansible.builtin.service:

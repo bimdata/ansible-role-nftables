@@ -12,7 +12,7 @@
 {{ ansible_managed | comment }}
 
 # Clean
-{% if nftables_flush_ruleset | bool %}
+{% if nftables_flush_ruleset | bool -%}
     flush ruleset
 {% else %}
     {% for table in _nftables_tables -%}
@@ -131,7 +131,8 @@ table {{ table.family }} {{ table.name }} {
             )
         %}
         {% if (merged_rules | length) > 0 -%}
-            {% for key, value in merged_rules.items() -%}
+            {# We sort the rules by the key alphabetical order, 0 is the key when using items() #}
+            {% for key, value in merged_rules.items() | sort(attribute='0') -%}
                 {{ value | indent(8, first=true) }}
             {% endfor %}
         {% endif %}
