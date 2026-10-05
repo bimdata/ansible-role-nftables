@@ -133,7 +133,9 @@ table {{ table.family }} {{ table.name }} {
         {% if (merged_rules | length) > 0 -%}
             {# We sort the rules by the key alphabetical order, 0 is the key when using items() #}
             {% for key, value in merged_rules.items() | sort(attribute='0') -%}
-                {{ value | indent(8, first=true) }}
+                {% if value is not none and value | trim | length > 0 -%}
+                    {{ value | indent(8, first=true) }}
+                {% endif %}
             {% endfor %}
         {% endif %}
     }
