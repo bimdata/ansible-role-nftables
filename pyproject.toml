@@ -7,13 +7,7 @@ authors = [
     { name = "RomainMou", email = "58464216+RomainMou@users.noreply.github.com" }
 ]
 requires-python = ">=3.14"
-dependencies = [
-    "molecule-plugins[docker]>=26.7.15",
-    "molecule[docker]>=26.8.0",
-]
-
-[project.scripts]
-ansible-role-nftables = "ansible_role_nftables:main"
+dependencies = []
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
@@ -27,4 +21,48 @@ dev = [
     "ansible>=14.3.1",
     "ansible-lint>=26.8.0",
     "molecule>=26.8.0",
+    "molecule-plugins[docker]>=26.7.15",
+]
+
+[tool.tox]
+envlist = [
+    "ansible218",
+    "ansible219",
+    "ansible220",
+    "ansible221"
+]
+
+[tool.tox.env_run_base]
+package = "skip"
+commands = [["molecule", "test"]]
+
+[tool.tox.env.ansible218]
+base_python = "python3.13"
+deps = [
+    "molecule",
+    "molecule-plugins[docker]",
+    "ansible-core==2.18.*"
+]
+
+[tool.tox.env.ansible219]
+base_python = "python3.13"
+deps = [
+    "molecule",
+    "molecule-plugins[docker]",
+    "ansible-core==2.19.*"
+]
+
+[tool.tox.env.ansible220]
+base_python = "python3.13"
+deps = [
+    "molecule",
+    "molecule-plugins[docker]",
+    "ansible-core==2.20.*"
+]
+
+[tool.tox.env.ansible221]
+deps = [
+    "molecule",
+    "molecule-plugins[docker]",
+    "ansible-core==2.21.*"
 ]
