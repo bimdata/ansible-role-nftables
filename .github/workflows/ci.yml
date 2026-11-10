@@ -36,7 +36,7 @@ jobs:
           ANSIBLE_FORCE_COLOR: "1"
 
   molecule:
-    name: ${{ matrix.tox_env }}
+    name: ${{ matrix.tox_env }}-${{ matrix.python }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
