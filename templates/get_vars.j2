@@ -1,15 +1,17 @@
 #jinja2: lstrip_blocks: True
 {% set items = [] %}
 {% for varname in (lookup('varnames', '^' ~ app_name ~ '_.+_' ~ var_type ~ '(s)?$', wantlist=True) | sort) %}
-  {% set var = lookup('vars', varname) %}
-  {% if var is not none and (var | length) %}
-    {% if var is mapping %}
-      {% set noop = items.append(var) %}
-    {% elif var is iterable and var is not string %}
-      {% for item in var %}
-        {% set noop = items.append(item) %}
-      {% endfor %}
+    {% set var = lookup('vars', varname) %}
+    {% if var is not none and (var | length) %}
+        {% if var is mapping %}
+            {% set var = [var] %}
+        {% elif var is string or var is not iterable %}
+            {% set var = [] %}
+        {% endif %}
+        {% for item in var %}
+            {# The source variable name is only used during the validity check of the rules, it's ignored later #}
+            {% set noop = items.append(item | combine({'_source_var': varname})) %}
+        {% endfor %}
     {% endif %}
-  {% endif %}
 {% endfor %}
 {{ items | to_json }}

@@ -1,6 +1,16 @@
 #!/usr/sbin/nft -f
 
-{% set ns = namespace(t_has_content=false) -%}
+{# Remove the _source_var from the variables #}
+{% set ns = namespace(
+    t_has_content=false,
+    nftables_tables = _nftables_tables | community.general.remove_keys(target="_source_var"),
+    nftables_chains = _nftables_chains | community.general.remove_keys(target="_source_var"),
+    nftables_defines = _nftables_defines | community.general.remove_keys(target="_source_var"),
+    nftables_sets = _nftables_sets | community.general.remove_keys(target="_source_var"),
+    nftables_maps = _nftables_maps | community.general.remove_keys(target="_source_var"),
+    nftables_objects = _nftables_objects | community.general.remove_keys(target="_source_var"),
+    nftables_rules = _nftables_rules | community.general.remove_keys(target="_source_var")
+) -%}
 {% macro t_new_section(title) %}
     {% if ns.t_has_content %}
 
@@ -15,13 +25,15 @@
 {% if nftables_flush_ruleset | bool -%}
     flush ruleset
 {% else %}
-    {% for table in _nftables_tables -%}
-        destroy table {{ table.family }} {{ table.name }}
+    {% for table_def in ns.nftables_tables %}
+        {% for command in ['table', 'delete table'] -%}
+            {{ command }} {{ table_def.table }}
+        {% endfor %}
     {% endfor %}
 {% endif %}
 
-{% if (_nftables_defines | length) > 0 %}
-{% set merged_defines = _nftables_defines | combine %}
+{% if (ns.nftables_defines | length) > 0 %}
+{% set merged_defines = ns.nftables_defines | combine %}
 # Define
     {% for name, value in merged_defines.items() %}
         {% if value is string %}
@@ -34,36 +46,46 @@
     {% endfor %}
 {% endif %}
 
-{% for table in _nftables_tables %}
-table {{ table.family }} {{ table.name }} {
+{% for table_def in ns.nftables_tables %}
+{% set table = table_def.table %}
+table {{ table }} {
     {% set ns.t_has_content = false -%}
+    {% if table_def.comment is defined %}
+    comment "{{ table_def.comment }}"
+    {% set ns.t_has_content = true %}
+    {% endif %}
+    {% if (table_def.flags | default([]) | length) > 0 %}
+    flags {{ table_def.flags | join(', ') }}
+    {% set ns.t_has_content = true %}
+    {% endif %}
+    {% set is_default_table = table == nftables_table_use_by_default -%}
 
     {# Merge variables #}
     {# Data from the default table #}
-    {% if table.name == nftables_table_use_by_default %}
-        {% set merged_sets = _nftables_sets | selectattr('table', 'undefined') | combine %}
-        {% set merged_maps = _nftables_maps | selectattr('table', 'undefined') | combine %}
-        {% set merged_objects = _nftables_objects | selectattr('table', 'undefined') %}
-        {% set merged_chains = _nftables_chains | selectattr('table', 'undefined') %}
+    {% if is_default_table %}
+        {% set merged_sets = ns.nftables_sets | selectattr('table', 'undefined') | combine %}
+        {% set merged_maps = ns.nftables_maps | selectattr('table', 'undefined') | combine %}
+        {% set merged_objects = ns.nftables_objects | selectattr('table', 'undefined') %}
+        {% set merged_chains = ns.nftables_chains | selectattr('table', 'undefined') %}
     {% endif -%}
 
     {# Then explicit object definition #}
     {% set merged_sets = merged_sets | default({}) | combine(
-            _nftables_sets
+            ns.nftables_sets
             | selectattr('table', 'defined')
-            | selectattr('table', 'equalto', table.name)
+            | selectattr('table', 'equalto', table)
             | combine
         )
     %}
     {% set merged_maps = merged_maps | default({}) | combine(
-            _nftables_maps
+            ns.nftables_maps
             | selectattr('table', 'defined')
-            | selectattr('table', 'equalto', table.name)
+            | selectattr('table', 'equalto', table)
             | combine
         )
     %}
-    {% set merged_objects = merged_objects | default([]) + (_nftables_objects | selectattr('table', 'defined') | selectattr('table', 'equalto', table.name)) %}
-    {% set merged_chains = merged_chains | default([]) + (_nftables_chains | selectattr('table', 'defined') | selectattr('table', 'equalto', table.name)) %}
+    {% set merged_objects = merged_objects | default([]) + (ns.nftables_objects | selectattr('table', 'defined') | selectattr('table', 'equalto', table)) %}
+    {% set merged_chains = merged_chains | default([]) + (ns.nftables_chains | selectattr('table', 'defined') | selectattr('table', 'equalto', table)) %}
 
     {%- if (merged_objects | length) > 0 -%}
         {{ t_new_section(title="Object definitions") }}
@@ -109,10 +131,10 @@ table {{ table.family }} {{ table.name }} {
     chain {{ chain.name }} {
         {# rules define with the chain #}
         {% set merged_rules = chain.rules | default({}) %}
-        {% if table.name == nftables_table_use_by_default %}
+        {% if is_default_table %}
             {# default table rule definition #}
             {% set merged_rules = merged_rules | combine(
-                    _nftables_rules
+                    ns.nftables_rules
                     | selectattr('table', 'undefined')
                     | selectattr('chain', 'equalto', chain.name)
                     | map(attribute='rules')
@@ -122,9 +144,9 @@ table {{ table.family }} {{ table.name }} {
         {% endif %}
         {# rules with explicit table #}
         {% set merged_rules = merged_rules | combine(
-                _nftables_rules
+                ns.nftables_rules
                 | selectattr('table', 'defined')
-                | selectattr('table', 'equalto', table.name)
+                | selectattr('table', 'equalto', table)
                 | selectattr('chain', 'equalto', chain.name)
                 | map(attribute='rules')
                 | combine
