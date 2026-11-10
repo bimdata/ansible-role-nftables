@@ -1,0 +1,76 @@
+---
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ansible-lint:
+    name: ansible-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Run ansible-lint
+        run: uv run ansible-lint
+        env:
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"
+
+  molecule:
+    name: ${{ matrix.tox_env }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tox_env: ansible220
+            python: "3.13"
+          - tox_env: ansible220
+            python: "3.14"
+          - tox_env: ansible221
+            python: "3.13"
+          - tox_env: ansible221
+            python: "3.14"
+          - tox_env: ansible222
+            python: "3.13"
+          - tox_env: ansible222
+            python: "3.14"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          path: ansible-role-nftables
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install tox
+        run: python -m pip install "tox>=4.21"
+
+      - name: Run molecule
+        working-directory: ansible-role-nftables
+        run: tox -e ${{ matrix.tox_env }}
+        env:
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"

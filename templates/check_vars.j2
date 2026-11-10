@@ -13,7 +13,7 @@
 {# Tables validation #}
 {% for table_def in _nftables_tables %}
     {# Must be unique #}
-    {% if table_def.table in validated_tables.keys() %}
+    {% if table_def.table is defined and table_def.table in validated_tables.keys() %}
         {% set noop = errors.append(
             table_def._source_var ~ ": table '" ~ table_def.table
             ~ "' is already defined in: '" ~ validated_tables[table_def.table]["_source_var"] ~ "'."
@@ -22,7 +22,7 @@
     {% elif table_def.table is not defined or table_def.table is not string or table_def.table is not match(table_regex) %}
         {% set noop = errors.append(
             table_def._source_var
-            ~ ": table '" ~ table_def.table ~ "' must be in format '<family> <name>'. Valid families are: "
+            ~ ": table '" ~ table_def.table | default('') ~ "' must be in format '<family> <name>'. Valid families are: "
             ~ (nftables_table_families | join(', ')) ~ "."
         ) %}
     {% else %}
@@ -43,9 +43,9 @@
     {# @ is invalid in a chain name, can safely be used as a separator #}
     {% set chain_real_table = chain_def.table | default(nftables_table_use_by_default) %}
     {# Table must exists #}
-    {% if chain_def.table is defined and chain_def.table not in validated_tables.keys() %}
+    {% if chain_real_table not in validated_tables.keys() %}
         {% set noop = errors.append(
-            chain_def._source_var ~ ": reference an undefined table '" ~ chain_def.table ~ "'."
+            chain_def._source_var ~ ": reference an undefined table '" ~ chain_real_table ~ "'."
             ~ "Existing tables: " ~ validated_tables.keys() | join(', ') ~ "."
         ) %}
     {# Must have a name #}
@@ -106,9 +106,9 @@
 {% for rule_def in _nftables_rules %}
     {% set rule_real_table = rule_def.table | default(nftables_table_use_by_default) %}
     {# Table must exists #}
-    {% if rule_def.table is defined and rule_def.table not in validated_tables.keys() %}
+    {% if rule_real_table not in validated_tables.keys() %}
         {% set noop = errors.append(
-            rule_def._source_var ~ ": reference an undefined table '" ~ rule_def.table ~ "'."
+            rule_def._source_var ~ ": reference an undefined table '" ~ rule_real_table ~ "'."
             ~ "Existing tables: " ~ validated_tables.keys() | join(', ') ~ "."
         ) %}
     {# Must have a chain #}

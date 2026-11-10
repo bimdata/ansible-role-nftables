@@ -1,0 +1,112 @@
+---
+dependency:
+  name: galaxy
+  options:
+    # Roles and collections are both defined in requirements.yml
+    role-file: ${MOLECULE_SCENARIO_DIRECTORY}/requirements.yml
+    requirements-file: ${MOLECULE_SCENARIO_DIRECTORY}/requirements.yml
+
+platforms:
+  - name: nftables_bookworm_${TOX_ENV_NAME}
+    image: docker.io/library/debian:bookworm
+  - name: nftables_trixie_${TOX_ENV_NAME}
+    image: docker.io/library/debian:trixie
+
+  - name: nftables_noble_${TOX_ENV_NAME}
+    image: docker.io/library/ubuntu:noble
+  - name: nftables_resolute_${TOX_ENV_NAME}
+    image: docker.io/library/ubuntu:resolute
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..
+  inventory:
+    group_vars:
+      all:
+        # No systemd in the containers, molecule apply the rules itself
+        nftables_enable_service_management: false
+
+        nftables_main_tables:
+          table: inet main
+          comment: Main host firewall
+        # Same name in different families
+        nftables_filter_tables:
+          - table: ip filter
+          - table: ip6 filter
+            flags:
+              - dormant
+        nftables_table_use_by_default: inet main
+        nftables_filter_chains:
+          - name: forward
+            table: ip filter
+            rules:
+              00_policy: type filter hook forward priority filter; policy drop;
+          - name: forward
+            table: ip6 filter
+            rules:
+              00_policy: type filter hook forward priority filter; policy drop;
+        nftables_filter_rules:
+          - table: ip filter
+            chain: forward
+            rules:
+              10_icmp: icmp type echo-request accept
+          - table: ip6 filter
+            chain: forward
+            rules:
+              10_icmp: icmpv6 type echo-request accept
+        nftables_base_chains:
+          - name: input
+            table: inet main
+            rules:
+              00_policy: type filter hook input priority filter; policy drop;
+              01_localhost: iif lo accept
+              02_state: "ct state vmap { established : accept, related : accept, invalid : drop }"
+              03_ssh: "tcp dport 22 accept"
+
+          - name: output
+            rules:
+              00_policy: type filter hook output priority filter; policy accept;
+        nftables_admin_rules:
+          table: inet main
+          chain: input
+          rules:
+            11_admin_snmp_accept: |
+              # SNMP
+              ip saddr @admin_ipv4 udp dport 161 accept
+              ip6 saddr @admin_ipv6 udp dport 161 accept
+        nftables_admin_lan_defines:
+          admin_lan_ipv4: 192.0.2.0/25
+          admin_lan_ipv6:
+            - 2001:db8:ac:12::/64
+            - 2001:db8:ac:13::/64
+        nftables_admin_vpn_defines:
+          admin_vpn_ipv4: 198.51.100.0/24
+          admin_vpn_ipv6: 2001:db8:ff::/64
+        nftables_admin_sets:
+          # Need to escape dolar sign in molecule, by doubling it
+          admin_ipv4: |-
+            type ipv4_addr
+            flags interval
+            auto-merge
+
+            elements = {
+                $$admin_lan_ipv4,
+                $$admin_vpn_ipv4
+            }
+          admin_ipv6: |-
+            type ipv6_addr
+            flags interval
+            auto-merge
+            elements = {
+                $$admin_lan_ipv6,
+                $$admin_vpn_ipv6
+            }
+        nftables_web_forward_map:
+          web_forward_map: |-
+            type inet_service : ipv4_addr
+            elements = {
+              80 : 192.0.2.1,
+              443 : 192.0.2.1,
+              8080 : 192.0.2.2,
+              8443 : 192.0.2.2
+            }

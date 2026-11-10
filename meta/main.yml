@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  namespace: bimdata
+  role_name: nftables
+  author: Romain
+  description: This role installs and configures nftables.
+  company: BIMData.io
+  license: MIT
+  # Probably works on older version, but not tested
+  min_ansible_version: "2.20"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - noble
+        - resolute
+  galaxy_tags:
+    - nftables
+    - firewall
+    - netfilter
+dependencies: []

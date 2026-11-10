@@ -1,0 +1,29 @@
+---
+- name: "Check that the role fails: {{ case.name }}"
+  block:
+    - name: "Run the role with invalid variables: {{ case.name }}"
+      ansible.builtin.include_role:
+        name: ansible-role-nftables
+      vars:
+        # Empty values are ignored by the role
+        nftables_zz_test_tables: "{{ case.tables | default([]) }}"
+        nftables_zz_test_chains: "{{ case.chains | default([]) }}"
+        nftables_zz_test_sets: "{{ case.sets | default([]) }}"
+        nftables_zz_test_maps: "{{ case.maps | default([]) }}"
+        nftables_zz_test_objects: "{{ case.objects | default([]) }}"
+        nftables_zz_test_rules: "{{ case.rules | default([]) }}"
+        nftables_table_use_by_default: "{{ case.table_use_by_default | default('inet main') }}"
+
+    - name: "Fail as the role did not fail: {{ case.name }}"
+      ansible.builtin.fail:
+        msg: "The role should have failed with: {{ case.error }}"
+
+  rescue:
+    - name: "Check the error message: {{ case.name }}"
+      ansible.builtin.assert:
+        that:
+          - case.error in ansible_failed_result.msg
+        fail_msg: >-
+          Expected an error containing "{{ case.error }}",
+          got: {{ ansible_failed_result.msg }}
+        quiet: true
