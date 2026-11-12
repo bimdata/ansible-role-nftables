@@ -26,34 +26,17 @@ dev = [
 
 [tool.tox]
 envlist = [
-    "ansible218",
-    "ansible219",
     "ansible220",
-    "ansible221"
+    "ansible221",
+    "ansible222"
 ]
 
 [tool.tox.env_run_base]
 package = "skip"
 commands = [["molecule", "test"]]
 
-[tool.tox.env.ansible218]
-base_python = "python3.13"
-deps = [
-    "molecule",
-    "molecule-plugins[docker]",
-    "ansible-core==2.18.*"
-]
-
-[tool.tox.env.ansible219]
-base_python = "python3.13"
-deps = [
-    "molecule",
-    "molecule-plugins[docker]",
-    "ansible-core==2.19.*"
-]
 
 [tool.tox.env.ansible220]
-base_python = "python3.13"
 deps = [
     "molecule",
     "molecule-plugins[docker]",
@@ -65,4 +48,11 @@ deps = [
     "molecule",
     "molecule-plugins[docker]",
     "ansible-core==2.21.*"
+]
+
+[tool.tox.env.ansible222]
+deps = [
+    "molecule",
+    "molecule-plugins[docker]",
+    "ansible-core==2.22.*"
 ]

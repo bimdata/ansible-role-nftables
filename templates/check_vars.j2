@@ -1,0 +1,131 @@
+#jinja2: lstrip_blocks: True
+{% set errors = [] -%}
+
+{% set table_regex = '^(' ~ (nftables_table_families | join('|')) ~ ') \\S+$' %}
+{% set validated_tables = {} -%}
+
+{# structure of vdict alidated_tables:
+  table.name:
+    "_source_var": table._source_var
+    chains:
+      - chain_def.name : chain_def._source_var #}
+
+{# Tables validation #}
+{% for table_def in _nftables_tables %}
+    {# Must be unique #}
+    {% if table_def.table is defined and table_def.table in validated_tables.keys() %}
+        {% set noop = errors.append(
+            table_def._source_var ~ ": table '" ~ table_def.table
+            ~ "' is already defined in: '" ~ validated_tables[table_def.table]["_source_var"] ~ "'."
+        ) %}
+    {# Definition must be <family> <name> #}
+    {% elif table_def.table is not defined or table_def.table is not string or table_def.table is not match(table_regex) %}
+        {% set noop = errors.append(
+            table_def._source_var
+            ~ ": table '" ~ table_def.table | default('') ~ "' must be in format '<family> <name>'. Valid families are: "
+            ~ (nftables_table_families | join(', ')) ~ "."
+        ) %}
+    {% else %}
+        {% set noop = validated_tables.update({table_def.table: {"_source_var": table_def._source_var, "chains": {}},}) %}
+    {% endif %}
+{% endfor -%}
+
+{# Default table: table must exists to be referenced #}
+{% if (nftables_table_use_by_default | length) > 0 and nftables_table_use_by_default not in validated_tables.keys() %}
+    {% set noop = errors.append(
+        "nftables_table_use_by_default: reference an undefined table '" ~ nftables_table_use_by_default ~ "'."
+        ~ "Existing tables: " ~ validated_tables.keys() | join(', ')
+    ) %}
+{% endif -%}
+
+{# Chains validation #}
+{% for chain_def in _nftables_chains %}
+    {# @ is invalid in a chain name, can safely be used as a separator #}
+    {% set chain_real_table = chain_def.table | default(nftables_table_use_by_default) %}
+    {# Table must exists #}
+    {% if chain_real_table not in validated_tables.keys() %}
+        {% set noop = errors.append(
+            chain_def._source_var ~ ": reference an undefined table '" ~ chain_real_table ~ "'."
+            ~ "Existing tables: " ~ validated_tables.keys() | join(', ') ~ "."
+        ) %}
+    {# Must have a name #}
+    {% elif chain_def.name is not defined or chain_def.name is not string or (chain_def.name | length) == 0 %}
+        {% set noop = errors.append(
+            chain_def._source_var ~ ": chain definition "
+            ~ chain_def | to_json
+            ~ " must have a name."
+        ) %}
+    {# Must be unique #}
+    {% elif chain_def.name is in validated_tables[chain_real_table]["chains"] %}
+        {% set noop = errors.append(
+            chain_def._source_var ~ ": chain '" ~ chain_def.name
+            ~ "' is already defined in: '" ~ validated_tables[chain_real_table]["chains"][chain_def.name] ~ "'."
+        ) %}
+    {% else %}
+        {% set noop = validated_tables[chain_real_table]["chains"].update({chain_def.name: chain_def._source_var}) %}
+    {% endif %}
+{% endfor -%}
+
+{# Defines validation #}
+{# No validation yet #}
+
+{# Sets validation #}
+{% for set_def in _nftables_sets %}
+    {# Table must exists #}
+    {% if set_def.table is defined and set_def.table not in validated_tables.keys() %}
+        {% set noop = errors.append(
+            set_def._source_var ~ ": reference an undefined table '" ~ set_def.table ~ "'."
+            ~ "Existing tables: " ~ validated_tables.keys() | join(', ') ~ "."
+        ) %}
+    {% endif %}
+{% endfor -%}
+
+{# Maps validation #}
+{% for map_def in _nftables_maps %}
+    {# Table must exists #}
+    {% if map_def.table is defined and map_def.table not in validated_tables.keys() %}
+        {% set noop = errors.append(
+            map_def._source_var ~ ": reference an undefined table '" ~ map_def.table ~ "'."
+            ~ "Existing tables: " ~ validated_tables.keys() | join(', ') ~ "."
+        ) %}
+    {% endif %}
+{% endfor -%}
+
+{# Objects validation #}
+{% for object_def in _nftables_objects %}
+    {# Table must exists #}
+    {% if object_def.table is defined and object_def.table not in validated_tables.keys() %}
+        {% set noop = errors.append(
+            object_def._source_var ~ ": reference an undefined table '" ~ object_def.table ~ "'."
+            ~ "Existing tables: " ~ validated_tables.keys() | join(', ') ~ "."
+        ) %}
+    {% endif %}
+{% endfor -%}
+
+{# Rules validation #}
+{% for rule_def in _nftables_rules %}
+    {% set rule_real_table = rule_def.table | default(nftables_table_use_by_default) %}
+    {# Table must exists #}
+    {% if rule_real_table not in validated_tables.keys() %}
+        {% set noop = errors.append(
+            rule_def._source_var ~ ": reference an undefined table '" ~ rule_real_table ~ "'."
+            ~ "Existing tables: " ~ validated_tables.keys() | join(', ') ~ "."
+        ) %}
+    {# Must have a chain #}
+    {% elif rule_def.chain is not defined or rule_def.chain is not string or (rule_def.chain | length) == 0 %}
+        {% set noop = errors.append(
+            rule_def._source_var ~ ": rule definition "
+            ~ rule_def | to_json
+            ~ " must have a chain."
+        ) %}
+    {# Chain must exists #}
+    {% elif rule_def.chain not in validated_tables[rule_real_table]["chains"] %}
+        {% set noop = errors.append(
+            rule_def._source_var
+            ~ ": reference an undefined chain '" ~ rule_def.chain ~ "' in table '" ~ rule_real_table ~ "'."
+            ~ "Existing chains: " ~ validated_tables[rule_real_table]["chains"].keys() | join(', ') ~ "."
+        ) %}
+    {% endif %}
+{% endfor -%}
+
+{{ errors | to_json }}

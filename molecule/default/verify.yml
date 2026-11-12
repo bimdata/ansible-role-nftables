@@ -1,0 +1,49 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  vars:
+    ansible_user: root
+  tasks:
+    - name: Check config main config file
+      ansible.builtin.stat:
+        path: /etc/nftables.conf
+      register: conf
+
+    - name: Check config main config file
+      ansible.builtin.assert:
+        that:
+          - conf.stat.exists
+
+    - name: Check rules validity
+      ansible.builtin.command: nft -c -f /etc/nftables.conf
+      changed_when: false
+
+    - name: Apply the ruleset
+      ansible.builtin.command: nft -f /etc/nftables.conf
+      register: apply
+      changed_when: true
+
+    - name: Retrieve ruleset
+      ansible.builtin.command: nft list ruleset
+      register: nft
+      changed_when: false
+
+    - name: Print ruleset
+      ansible.builtin.debug:
+        var: nft
+
+- name: Verify invalid configurations
+  hosts: all
+  gather_facts: false
+  vars:
+    ansible_user: root
+  vars_files:
+    - vars/validation_cases.yml
+  tasks:
+    - name: Run the validation cases
+      ansible.builtin.include_tasks: tasks/validation_case.yml
+      loop: "{{ validation_cases }}"
+      loop_control:
+        loop_var: case
+        label: "{{ case.name }}"

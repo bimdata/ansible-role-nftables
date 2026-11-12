@@ -1,0 +1,6 @@
+---
+collections:
+  # Used by create.yml / destroy.yml and the docker connection
+  - name: community.docker
+  - name: community.general
+    version: ">=9.1.0"
