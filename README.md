@@ -42,15 +42,15 @@ So if you remove a table from your variables and use `nftables_flush_ruleset: fa
 Variables used for rules definition:
 
 | Variables                     | Default value                                                                                                      | Description                                                                   |
-|-------------------------------|--------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| nftables_table_use_by_default | "{{ ((_nftables_tables \| length) == 1) \| ternary(_nftables_tables[0].table | default(''), '') }}"                | Define the default table to use when the value is not defined on each object. |
-| _nftables_tables              | "{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='table')) \| from_json }}"  | Agregate table definitions.                                                   |
-| _nftables_chains              | "{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='chain')) \| from_json }}"  | Agregate chain definitions                                                    |
-| _nftables_defines             | "{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='define')) \| from_json }}" | Agregate define definitions.                                                  |
-| _nftables_sets                | "{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='set')) \| from_json }}"    | Agregate set definitions.                                                     |
-| _nftables_maps                | "{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='map')) \| from_json }}"    | Agregate map definitions.                                                     |
-| _nftables_objects             | "{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='object')) \| from_json }}" | Agregate other objects definitions.                                           |
-| _nftables_rules               | "{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='rule')) \| from_json }}"   | Agregate rule definitions.                                                    |
+|-------------------------------|----------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| nftables_table_use_by_default | `"{{ ((_nftables_tables \| length) == 1) \| ternary(_nftables_tables[0].table \| default(''), '') }}"`               | Define the default table to use when the value is not defined on each object. |
+| _nftables_tables              | `"{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='table')) \| from_json }}"`  | Agregate table definitions.                                                   |
+| _nftables_chains              | `"{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='chain')) \| from_json }}"`  | Agregate chain definitions                                                    |
+| _nftables_defines             | `"{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='define')) \| from_json }}"` | Agregate define definitions.                                                  |
+| _nftables_sets                | `"{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='set')) \| from_json }}"`    | Agregate set definitions.                                                     |
+| _nftables_maps                | `"{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='map')) \| from_json }}"`    | Agregate map definitions.                                                     |
+| _nftables_objects             | `"{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='object')) \| from_json }}"` | Agregate other objects definitions.                                           |
+| _nftables_rules               | `"{{ lookup('template', 'get_vars.j2', template_vars=dict(app_name='nftables', var_type='rule')) \| from_json }}"`   | Agregate rule definitions.                                                    |
 
 
 **In most cases, you should not modify the variables that start with an '_'.**
